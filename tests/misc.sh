@@ -141,3 +141,8 @@ require()
 	fi
 	quick_exit
 }
+
+cd()
+{
+	export WORKING_DIR=$(readlink -f $1)
+}

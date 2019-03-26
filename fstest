@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+
+import os
+import socket
+import sys
+
+
+def get_working_dir() -> str:
+    root = os.environ.get("TEST_ROOT_DIR", None)
+    if root is None:
+        print("TEST_ROOT_DIR is not set", file=sys.stderr)
+        sys.exit(1)
+
+    mnt = os.environ.get("FSTEST_MNT", None)
+    if mnt is None:
+        print("FSTEST_MNT is not set", file=sys.stderr)
+        sys.exit(1)
+
+    cwd = os.environ.get("WORKING_DIR", os.getcwd())
+    assert cwd.startswith(root)
+
+    # /mnt/data/joerg/sgx-lkl/apps/fstest/tests/chmod/05.t
+    return os.path.join(mnt, cwd[len(root) + 1:].rstrip("/"))
+
+
+def main() -> None:
+    ipv4 = os.environ.get("SGXLKL_IP4", None)
+    if ipv4 is None:
+        print("SGXLKL_IP4 is not set", file=sys.stderr)
+        sys.exit(1)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ipv4, 6000))
+
+    cwd = get_working_dir()
+
+    args = [ cwd.encode("utf-8") ]
+    for arg in sys.argv:
+        args.append(arg.encode("utf-8"))
+    message = b"\0".join(args) + b"\4"
+    s.send(message)
+
+    while True:
+        resp = s.recv(1024)
+        if len(resp) == 0:
+            break
+        sys.stdout.buffer.write(resp.replace(b"\0", b""))
+    s.close()
+
+
+if __name__ == "__main__":
+    main()

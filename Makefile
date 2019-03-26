@@ -6,10 +6,34 @@
 #CFLAGS+=-DHAS_TRUNCATE64
 #CFLAGS+=-DHAS_STAT64
 
-all:	fstest
+DISK = sgxlkl-disk.img
+ESCALATE_CMD = sudo
+IMAGE_SIZE_MB = 100
+PROG = fstest-server
+FINAL_CFLAGS = -g -fPIE -pie -Wall -pthread $(CFLAGS)
 
-fstest:	fstest.c
-	gcc -Wall ${CFLAGS} fstest.c -o fstest
+all: $(PROG)
+
+SRC = $(wildcard *.c)
+
+$(PROG):	$(SRC)
+	../../build/host-musl/bin/musl-gcc $(FINAL_CFLAGS) $(SRC) -o $@
+
+check: $(DISK)
+	python3 sgx-lkl-fstests ../../build/sgx-lkl-run $(DISK) /bin/$(PROG)
 
 clean:
-	rm -f fstest
+	rm -f $(PROG)
+
+$(DISK): $(PROG)
+	dd if=/dev/zero of="$@" count=$(IMAGE_SIZE_MB) bs=1M
+	mkfs.ext4 "$@"
+	$(ESCALATE_CMD) bash -c '\
+		set -euxo pipefail; \
+		mnt=`mktemp -d`; \
+		trap "rm -rf $$mnt" EXIT; \
+		mount -t ext4 -o loop "$@" $$mnt; \
+		install -D $(PROG) $$mnt/bin/$(PROG); \
+		mkdir -p $$mnt/dev; \
+		umount $$mnt; \
+	'

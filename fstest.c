@@ -40,6 +40,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <assert.h>
+#include "fstest_overrides.h"
 
 #ifndef HAS_TRUNCATE64
 #define	truncate64	truncate
