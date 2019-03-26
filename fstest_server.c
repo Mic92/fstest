@@ -120,7 +120,6 @@ void *handle_request(void* arg) {
 
     memset(&send_context, 0, sizeof(struct send_context));
     send_context.argv = (char**)calloc(argc + 1, sizeof(char*));
-    fprintf(stderr, "%s() at %s:%d: %p %p\n", __func__, __FILE__, __LINE__, &send_context.argv, send_context.argv);
     if (!send_context.argv) {
         perror("calloc");
         return NULL;

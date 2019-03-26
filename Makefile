@@ -20,10 +20,14 @@ $(PROG):	$(SRC)
 	../../build/host-musl/bin/musl-gcc $(FINAL_CFLAGS) $(SRC) -o $@
 
 check: $(DISK)
-	python3 sgx-lkl-fstests ../../build/sgx-lkl-run $(DISK) /bin/$(PROG)
+	if [[ -n "${SGXLKL_ENABLE_DEBUGGER}" ]]; then \
+		python3 sgx-lkl-fstests sgx-lkl-gdb --args ../../build/sgx-lkl-run $(DISK) /bin/$(PROG); \
+	else \
+		python3 sgx-lkl-fstests ../../build/sgx-lkl-run $(DISK) /bin/$(PROG); \
+	fi
 
 clean:
-	rm -f $(PROG)
+	rm -f $(PROG) $(DISK)
 
 $(DISK): $(PROG)
 	dd if=/dev/zero of="$@" count=$(IMAGE_SIZE_MB) bs=1M
