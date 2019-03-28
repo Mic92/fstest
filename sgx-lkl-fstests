@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import os
+import subprocess
+import socket
+import sys
+import time
+from pathlib import Path
+
+
+SCRIPT_PATH = Path(__file__).resolve().parent
+
+
+def is_up(ip: str, port: int):
+   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   try:
+      s.connect((ip, port))
+      s.shutdown(2)
+      return True
+   except OSError:
+       return False
+
+
+def main() -> None:
+    server_cmd = sys.argv[1:]
+    if len(server_cmd) == 0:
+        print(f"USAGE: {sys.argv[0]} SERVER_COMMAND...", file=sys.stderr)
+        sys.exit(1)
+
+    server = subprocess.Popen(server_cmd)
+    ipv4 = os.environ.get("SGXLKL_IP4", None)
+    if ipv4 is None:
+        print("The SGXLKL_IPV4 environment variable must be set", file=sys.stderr)
+        sys.exit(1)
+
+    mnt = os.environ.get("FSTEST_MNT", None)
+    if mnt is None:
+        print("The FSTEST_MNT environment variable must be set", file=sys.stderr)
+        sys.exit(1)
+
+    os.environ["TEST_ROOT_DIR"] = str(SCRIPT_PATH)
+
+    while not is_up(ipv4, 6000):
+        time.sleep(0.1)
+
+    try:
+        process = subprocess.run(["prove", "-r", SCRIPT_PATH.joinpath("tests"), "-j1"])
+        sys.exit(process.returncode)
+    finally:
+        server.terminate()
+
+
+if __name__ == "__main__":
+    main()
